@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Potato Disease Classifier</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f3f0 0%, #f0ebe5 100%);
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(139, 123, 103, 0.1) 0%, transparent 25%),
+                radial-gradient(circle at 75% 75%, rgba(101, 67, 33, 0.08) 0%, transparent 25%),
+                linear-gradient(90deg, rgba(160, 131, 101, 0.05) 0px, transparent 1px),
+                linear-gradient(0deg, rgba(160, 131, 101, 0.05) 0px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            animation: slideUp 0.8s ease-out;
+            border: 1px solid #e9ecef;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #8B7355, #6B5B47);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255, 255, 255, 0.05) 10px,
+                rgba(255, 255, 255, 0.05) 20px
+            );
+            animation: shimmer 3s linear infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .upload-area {
+            border: 2px dashed #A08365;
+            border-radius: 8px;
+            padding: 40px;
+            background: rgba(255, 253, 250, 0.8);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: #8B7355;
+            background: rgba(248, 246, 242, 0.9);
+            transform: translateY(-1px);
+        }
+
+        .upload-area.dragover {
+            border-color: #8B7355;
+            background: rgba(245, 240, 235, 0.9);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: #8B7355;
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #8B7355, #6B5B47);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(139, 115, 85, 0.3);
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 115, 85, 0.4);
+        }
+
+        .preview-section {
+            display: none;
+            margin-bottom: 30px;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .prediction-card {
+            background: rgba(255, 253, 250, 0.95);
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 12px rgba(139, 115, 85, 0.15);
+            border: 1px solid rgba(160, 131, 101, 0.2);
+            animation: slideIn 0.6s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .prediction-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .disease-result {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .disease-name {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        .healthy {
+            color: #8B7355;
+            background: linear-gradient(135deg, #f0ebe5, #e8e0d5);
+        }
+
+        .disease {
+            color: #B85450;
+            background: linear-gradient(135deg, #f8e8e7, #f0d5d4);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .confidence {
+            font-size: 1.2rem;
+            color: #666;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8B7355, #6B5B47);
+            border-radius: 5px;
+            transition: width 1s ease-out;
+            animation: fillBar 1.5s ease-out;
+        }
+
+        @keyframes fillBar {
+            from { width: 0%; }
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d, #5a6268);
+            color: white;
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #8B7355;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            border-top: 1px solid #e9ecef;
+            background: #f8f9fa;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🥔 Potato Disease Classifier</h1>
+            <p>Upload an image of a potato leaf to detect diseases instantly</p>
+        </div>
+
+        <div class="main-content">
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📸</div>
+                    <div class="upload-text">Drop your potato leaf image here</div>
+                    <div class="upload-subtext">or click to browse files</div>
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
+                    <input type="file" id="fileInput" class="file-input" accept="image/*">
+                </div>
+            </div>
+
+            <div class="preview-section" id="previewSection">
+                <div style="text-align: center;">
+                    <img id="imagePreview" class="image-preview" alt="Preview">
+                </div>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Analyzing your potato leaf image...</p>
+            </div>
+
+            <div class="results-section" id="resultsSection">
+                <div class="prediction-card">
+                    <h3 class="prediction-title">🔬 Analysis Results</h3>
+                    <div class="disease-result">
+                        <div id="diseaseName" class="disease-name"></div>
+                        <div class="confidence">
+                            Confidence: <span id="confidenceText">0%</span>
+                            <div class="confidence-bar">
+                                <div id="confidenceFill" class="confidence-fill" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="analyzeAnother()">Analyze Another</button>
+                        <button class="btn btn-secondary" onclick="downloadResult()">Download Result</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Powered by AI • Built for farmers and agricultural professionals</p>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewSection = document.getElementById('previewSection');
+        const imagePreview = document.getElementById('imagePreview');
+        const loading = document.getElementById('loading');
+        const resultsSection = document.getElementById('resultsSection');
+        const diseaseName = document.getElementById('diseaseName');
+        const confidenceText = document.getElementById('confidenceText');
+        const confidenceFill = document.getElementById('confidenceFill');
+
+        let currentImageData = null;
+
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please select a valid image file.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentImageData = e.target.result;
+                imagePreview.src = currentImageData;
+                previewSection.style.display = 'block';
+                
+                // Simulate analysis
+                setTimeout(() => {
+                    analyzeImage();
+                }, 1000);
+            };
+            reader.readAsDataURL(file);
+
+            // Show loading
+            loading.style.display = 'block';
+            resultsSection.style.display = 'none';
+        }
+
+        function analyzeImage() {
+            // Simulate AI analysis with random results
+            const diseases = [
+                { name: 'Healthy', type: 'healthy', confidence: Math.random() * 15 + 85 },
+                { name: 'Early Blight', type: 'disease', confidence: Math.random() * 20 + 75 },
+                { name: 'Late Blight', type: 'disease', confidence: Math.random() * 20 + 80 },
+                { name: 'Leaf Scorch', type: 'disease', confidence: Math.random() * 25 + 70 }
+            ];
+
+            const result = diseases[Math.floor(Math.random() * diseases.length)];
+            
+            setTimeout(() => {
+                displayResults(result);
+            }, 2000);
+        }
+
+        function displayResults(result) {
+            loading.style.display = 'none';
+            resultsSection.style.display = 'block';
+
+            diseaseName.textContent = result.name;
+            diseaseName.className = `disease-name ${result.type}`;
+            
+            const confidence = Math.round(result.confidence);
+            confidenceText.textContent = `${confidence}%`;
+            confidenceFill.style.width = `${confidence}%`;
+
+            // Add appropriate emoji
+            if (result.type === 'healthy') {
+                diseaseName.textContent = `✅ ${result.name}`;
+            } else {
+                diseaseName.textContent = `⚠️ ${result.name}`;
+            }
+        }
+
+        function analyzeAnother() {
+            previewSection.style.display = 'none';
+            resultsSection.style.display = 'none';
+            loading.style.display = 'none';
+            fileInput.value = '';
+            currentImageData = null;
+        }
+
+        function downloadResult() {
+            if (!currentImageData) return;
+            
+            // Create a simple report
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = () => {
+                canvas.width = 800;
+                canvas.height = 600;
+                
+                // Draw white background
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw image
+                const imgAspect = img.width / img.height;
+                const canvasAspect = 400 / 300;
+                let drawWidth, drawHeight;
+                
+                if (imgAspect > canvasAspect) {
+                    drawWidth = 400;
+                    drawHeight = 400 / imgAspect;
+                } else {
+                    drawHeight = 300;
+                    drawWidth = 300 * imgAspect;
+                }
+                
+                const x = (400 - drawWidth) / 2 + 50;
+                const y = 50;
+                
+                ctx.drawImage(img, x, y, drawWidth, drawHeight);
+                
+                // Add title
+                ctx.fillStyle = 'black';
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Potato Disease Analysis Report', canvas.width / 2, 400);
+                
+                // Add results
+                ctx.font = '18px Arial';
+                ctx.fillText(`Disease: ${diseaseName.textContent}`, canvas.width / 2, 450);
+                ctx.fillText(`Confidence: ${confidenceText.textContent}`, canvas.width / 2, 480);
+                ctx.fillText(`Date: ${new Date().toLocaleDateString()}`, canvas.width / 2, 520);
+                
+                // Download
+                const link = document.createElement('a');
+                link.download = 'potato-disease-analysis.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            };
+            
+            img.src = currentImageData;
+        }
+    </script>
+</body>
+</html>
